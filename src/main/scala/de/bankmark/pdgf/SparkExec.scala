@@ -1,11 +1,9 @@
 package de.bankmark.pdgf
 
+import javassist.{ClassClassPath, ClassPool}
 import org.apache.spark.SparkContext
 import org.apache.spark.sql.SparkSession
 import pdgf.ui.cli.Controller
-import scalismo.support.nativelibs.NativeLibraryException
-
-import java.lang.Thread.sleep
 
 object SparkExec {
 
@@ -30,7 +28,7 @@ object SparkExec {
       .getOrCreate()
     val sparkContext = spark.sparkContext
 
-    // get the current active executors
+    // get the current active executors, these are the nodes used by pdgf
     val executors = currentActiveExecutors(sparkContext, true)
     val numCoresPerExecutor = sparkContext.getConf.getInt("spark.executor.cores", -1)
     val numNodes = executors.length
@@ -43,14 +41,24 @@ object SparkExec {
     val datagen = rdd.zipWithIndex().map(executorWithIdx => {
       val executor = executorWithIdx._1
       val executorNum = executorWithIdx._2 + 1
+
+      // make the PDGF parameters for distributed data generation
       val workers =  if (numCoresPerExecutor > 0) numCoresPerExecutor else Runtime.getRuntime.availableProcessors()
-      val pdgfDistributedArgs = s"-nc $executorNum -nn $numNodes -w $workers"
+      val pdgfDistributedArgs = s"-nn $executorNum -nc $numNodes -w $workers"
       val pdgfArgs = args ++ pdgfDistributedArgs.split(" ")
+
       val prettyArgs = pdgfArgs.map("\"" + _ + "\"").mkString("Array(", ",", ")")
       println(s"run pdgf on $executor: Controller.main(${prettyArgs})")
+      // add PDGF to javassist classpool
+      // when running on Spark, PDGF is not part of the system classpath but the Spark classpath
+      // hence its classes cannot be found by javassist
+      ClassPool.getDefault.appendClassPath(new ClassClassPath(classOf[Controller]))
+
+      // call pdgf with the command line args + the distributed args
       Controller.main(pdgfArgs)
     })
 
+    // run the mappers
     val results = datagen.collect()
     println("RESULTS")
     results.foreach(println)
