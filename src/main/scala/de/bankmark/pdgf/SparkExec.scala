@@ -31,7 +31,8 @@ object SparkExec {
     val numExecutors = sparkContext.getConf.getInt("spark.executor.instances", -1)
     assert(numExecutors > 0, "spark.executor.instances must be > 0")
 
-    // get the current active executors, these are the nodes used by pdgf
+    // wait for all executors to be ready, these are the nodes used by pdgf
+    // one pdgf instance : one spark task : one spark executor
     var executors = currentActiveExecutors(sparkContext, false)
     println(s"current executors: ${executors.length} / ${numExecutors}")
     while (executors.length < numExecutors) {
