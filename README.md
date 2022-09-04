@@ -11,6 +11,17 @@ sbt package
 
 ## Usage (Example for TPCx-BB 30TB)
 
+add the following configuration to `core-site.xml` or `hdfs-site.xml`, to disable hadoop filesystem cache:
+
+```xml
+<property>
+    <name>fs.hdfs.impl.disable.cache</name>
+    <value>true</value>
+</property>
+```
+
+then:
+
 ```shell
 cd $TPCXBB_HOME/data-generator/dicts
 tar -zcvf dicts.tar.gz *
@@ -27,7 +38,6 @@ bin/spark-submit \
   --conf 'spark.executor.memoryOverhead=512m' \
   --conf 'spark.driver.userClassPathFirst=true' \
   --conf 'spark.executor.userClassPathFirst=true' \
-  --conf 'spark.hadoop.fs.hdfs.impl.disable.cache=true' \
   --conf 'spark.executor.extraJavaOptions=-Djava.awt.headless=true -Dcore-site.xml=core-site.xml -Dhdfs-site.xml= -DFileChannelProvider=pdgf.util.caching.fileWriter.HDFSChannelProvider -Ddfs.replication.override=1' \
   --jars "$PDGF_HOME/pdgf.jar,$PDGF_HOME/extlib/*.jar" \
   --archives "$PDGF_HOME/dicts.tar.gz#dicts" \
