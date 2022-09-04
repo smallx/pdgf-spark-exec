@@ -35,7 +35,7 @@ bin/spark-submit \
   --conf 'spark.executor.instances=1000' \
   --conf 'spark.executor.cores=3' \
   --conf 'spark.executor.memory=3g' \
-  --conf 'spark.executor.memoryOverhead=512m' \
+  --conf 'spark.executor.memoryOverhead=1g' \
   --conf 'spark.driver.userClassPathFirst=true' \
   --conf 'spark.executor.userClassPathFirst=true' \
   --conf 'spark.executor.extraJavaOptions=-Djava.awt.headless=true -Dcore-site.xml=core-site.xml -Dhdfs-site.xml= -DFileChannelProvider=pdgf.util.caching.fileWriter.HDFSChannelProvider -Ddfs.replication.override=1' \

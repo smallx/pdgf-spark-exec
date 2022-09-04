@@ -49,6 +49,8 @@ object SparkExec {
     val rdd = sparkContext.parallelize(executors, numNodes)
     // on each partition run a pdgf instance and set the number of workers, i.e. the threads spawned by pdgf accordingly
     rdd.zipWithIndex().foreach(executorWithIdx => {
+      val startTime = System.currentTimeMillis()
+
       val executor = executorWithIdx._1
       val executorNum = executorWithIdx._2 + 1
 
@@ -66,6 +68,13 @@ object SparkExec {
 
       // call pdgf with the command line args + the distributed args
       Controller.main(pdgfArgs)
+
+      // waiting for pdgf finished
+      while (Controller.getInstance().getExitCode == null) {
+        Thread.sleep(3000)
+        println(s"waiting for pdgf finished, duration ${(System.currentTimeMillis() - startTime) / 1000} s")
+      }
+      println(s"pdgf finished with exitCode ${Controller.getInstance().getExitCode}")
     })
   }
 }
