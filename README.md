@@ -4,20 +4,33 @@ Execute PDGF on top of Spark
 ## Build
 
 ```shell
+mkdir -p lib
+cp /path/to/pdgf.jar lib/
 sbt package
 ```
 
-## Usage
+## Usage (Example for TPCx-BB 30TB)
 
 ```shell
-export PDGF_HOME=/dir/to/pdgf
-spark-submit --jars "$PDGF_HOME/pdgf.jar, $PDGF_HOME/extlib/*" --files "$PDGF_HOME/dicts/*" target/scala-2.11/pdgf-spark-exec_2.11-1.0.1.jar [PDGF OPTIONS]
-```
+cd $TPCXBB_HOME/data-generator/dicts
+tar -zcvf dicts.tar.gz *
+mv dicts.tar.gz ../dicts.tar.gz
 
-### Example - TPCx-AI
-Generate the training data sets for customer and CUSTOMER_IMAGES using the TPCx-AI data generator
-
-```shell
-export PDGF_HOME="$TPCXAI_HOME/lib/pdgf"
-spark-submit --jars "$PDGF_HOME/pdgf.jar,$PDGF_HOME/extlib/*" --files "$PDGF_HOME/dicts/*" target/scala-2.11/pdgf-spark-exec_2.11-1.0.1.jar -ns -sp MY_SEED 1234.0 -sf 1 -sp includeLabels 1.0 -sp TTVF 1.0 -s customer  
+export PDGF_HOME=$TPCXBB_HOME/data-generator
+export SPARK_HOME=/path/to/spark
+bin/spark-submit \
+--master yarn \
+--deploy-mode client \
+--conf 'spark.executor.instances=1000' \
+--conf 'spark.executor.cores=3' \
+--conf 'spark.executor.memory=3g' \
+--conf 'spark.executor.memoryOverhead=512m' \
+--conf 'spark.driver.userClassPathFirst=true' \
+--conf 'spark.executor.userClassPathFirst=true' \
+--conf 'spark.executor.extraJavaOptions=-Djava.awt.headless=true -Dcore-site.xml=core-site.xml -Dhdfs-site.xml= -DFileChannelProvider=pdgf.util.caching.fileWriter.HDFSChannelProvider -Ddfs.replication.override=1' \
+--jars "$PDGF_HOME/pdgf.jar,$PDGF_HOME/extlib/*.jar" \
+--archives "$PDGF_HOME/dicts.tar.gz#dicts" \
+--files "$PDGF_HOME/Constants.properties,$SPARK_HOME/conf/core-site.xml" \
+pdgf-spark-exec_2.12-1.0.1.jar \
+-ns -c -sp REFRESH_PHASE 0 -o "'hdfs://host:port/path/to/tpcxbb/benchmarks/bigbench/data/'+table.getName()+'/'" -ap 3000 -s -sf 30000
 ```

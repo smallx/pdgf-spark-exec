@@ -3,7 +3,7 @@ package de.bankmark.pdgf
 import javassist.{ClassClassPath, ClassPool}
 import org.apache.spark.SparkContext
 import org.apache.spark.sql.SparkSession
-import pdgf.ui.cli.Controller
+import pdgf.Controller
 
 object SparkExec {
 
@@ -28,8 +28,17 @@ object SparkExec {
       .getOrCreate()
     val sparkContext = spark.sparkContext
 
+    val numExecutors = sparkContext.getConf.getInt("spark.executor.instances", -1)
+    assert(numExecutors > 0, "spark.executor.instances must be > 0")
+
     // get the current active executors, these are the nodes used by pdgf
-    val executors = currentActiveExecutors(sparkContext, true)
+    var executors = currentActiveExecutors(sparkContext, false)
+    println(s"current executors: ${executors.length} / ${numExecutors}")
+    while (executors.length < numExecutors) {
+      Thread.sleep(1000)
+      executors = currentActiveExecutors(sparkContext, false)
+      println(s"current executors: ${executors.length} / ${numExecutors}")
+    }
     val numCoresPerExecutor = sparkContext.getConf.getInt("spark.executor.cores", -1)
     val numNodes = executors.length
     println(s"found $numNodes executors:")
@@ -38,7 +47,7 @@ object SparkExec {
     // create an RDD with #`numNodes` elements
     val rdd = sparkContext.parallelize(executors, numNodes)
     // on each partition run a pdgf instance and set the number of workers, i.e. the threads spawned by pdgf accordingly
-    val datagen = rdd.zipWithIndex().map(executorWithIdx => {
+    rdd.zipWithIndex().foreach(executorWithIdx => {
       val executor = executorWithIdx._1
       val executorNum = executorWithIdx._2 + 1
 
@@ -57,10 +66,5 @@ object SparkExec {
       // call pdgf with the command line args + the distributed args
       Controller.main(pdgfArgs)
     })
-
-    // run the mappers
-    val results = datagen.collect()
-    println("RESULTS")
-    results.foreach(println)
   }
 }
