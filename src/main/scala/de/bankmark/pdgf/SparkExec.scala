@@ -55,17 +55,15 @@ object SparkExec {
       // hence its classes cannot be found by javassist
       ClassPool.getDefault.appendClassPath(new ClassClassPath(classOf[Controller]))
 
-      // call pdgf with the command line args + the distributed args, standAlone = false
-      // see: Controller.main()
-      val controller = Controller.getInstance()
-      controller.start(pdgfArgs, controller.getConsoleInputStream)
+      // call pdgf with the command line args + the distributed args
+      Controller.main(pdgfArgs)
 
       // waiting for pdgf finished
-      while (controller.getExitCode == null) {
+      while (Controller.getInstance().getExitCode == null) {
         Thread.sleep(3000)
         println(s"waiting for pdgf finished, duration ${(System.currentTimeMillis() - startTime) / 1000} s")
       }
-      println(s"pdgf finished with exit code ${controller.getExitCode}")
+      println(s"pdgf finished with exit code ${Controller.getInstance().getExitCode}")
     })
   }
 }
