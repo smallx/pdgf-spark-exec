@@ -7,18 +7,13 @@ import pdgf.Controller
 
 object SparkExec {
 
-  /** Method that just returns the current active/registered executors
-   * excluding the driver.
-   * @param sc The spark context to retrieve registered executors.
-   * @return a list of executors each in the form of host:port.
-   */
-  def currentActiveExecutors(sc: SparkContext, includeDriver: Boolean = true): Seq[String] = {
+  def currentActiveExecutorCount(sc: SparkContext): Int = {
     val allExecutors = sc.getExecutorMemoryStatus.keys
-    val driverHost = sc.getConf.get("spark.driver.host");
-    if (includeDriver) {
-      allExecutors.toSeq
+    val driverHost = sc.getConf.get("spark.driver.host")
+    if (allExecutors.exists(_.split(":")(0) == driverHost)) {
+      allExecutors.size - 1
     } else {
-      allExecutors.filter(!_.split(":")(0).equals(driverHost)).toSeq
+      allExecutors.size
     }
   }
 
@@ -33,34 +28,28 @@ object SparkExec {
 
     // wait for all executors to be ready, these are the nodes used by pdgf
     // one pdgf instance : one spark task : one spark executor
-    var executors = currentActiveExecutors(sparkContext, false)
-    println(s"current executors: ${executors.length} / ${numExecutors}")
-    while (executors.length < numExecutors) {
+    var numActiveExecutors = currentActiveExecutorCount(sparkContext)
+    println(s"current executors: ${numActiveExecutors} / ${numExecutors}")
+    while (numActiveExecutors < numExecutors) {
       Thread.sleep(1000)
-      executors = currentActiveExecutors(sparkContext, false)
-      println(s"current executors: ${executors.length} / ${numExecutors}")
+      numActiveExecutors = currentActiveExecutorCount(sparkContext)
+      println(s"current executors: ${numActiveExecutors} / ${numExecutors}")
     }
+
     val numCoresPerExecutor = sparkContext.getConf.getInt("spark.executor.cores", -1)
-    val numNodes = executors.length
-    println(s"found $numNodes executors:")
-    println(executors.mkString(","))
+    val numNodes = numActiveExecutors
 
     // create an RDD with #`numNodes` elements
-    val rdd = sparkContext.parallelize(executors, numNodes)
+    val rdd = sparkContext.parallelize(1 to numActiveExecutors, numNodes)
     // on each partition run a pdgf instance and set the number of workers, i.e. the threads spawned by pdgf accordingly
-    rdd.zipWithIndex().foreach(executorWithIdx => {
+    rdd.foreach(executorNum => {
       val startTime = System.currentTimeMillis()
 
-      val executor = executorWithIdx._1
-      val executorNum = executorWithIdx._2 + 1
-
       // make the PDGF parameters for distributed data generation
-      val workers =  if (numCoresPerExecutor > 0) numCoresPerExecutor else Runtime.getRuntime.availableProcessors()
+      val workers = if (numCoresPerExecutor > 0) numCoresPerExecutor else Runtime.getRuntime.availableProcessors()
       val pdgfDistributedArgs = s"-nn $executorNum -nc $numNodes -w $workers"
       val pdgfArgs = args ++ pdgfDistributedArgs.split(" ")
 
-      val prettyArgs = pdgfArgs.map("\"" + _ + "\"").mkString("Array(", ",", ")")
-      println(s"run pdgf on $executor: Controller.main(${prettyArgs})")
       // add PDGF to javassist classpool
       // when running on Spark, PDGF is not part of the system classpath but the Spark classpath
       // hence its classes cannot be found by javassist
