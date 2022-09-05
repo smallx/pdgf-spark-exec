@@ -31,7 +31,9 @@ export PDGF_HOME=$TPCXBB_HOME/data-generator
 export SPARK_HOME=/path/to/spark
 bin/spark-submit \
   --master yarn \
-  --deploy-mode client \
+  --deploy-mode cluster \
+  --conf 'spark.driver.memory=3g' \
+  --conf 'spark.driver.memoryOverhead=1g' \
   --conf 'spark.executor.instances=1000' \
   --conf 'spark.executor.cores=3' \
   --conf 'spark.executor.memory=3g' \
