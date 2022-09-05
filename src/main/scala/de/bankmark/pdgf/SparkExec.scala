@@ -28,12 +28,12 @@ object SparkExec {
 
     // wait for all executors to be ready, these are the nodes used by pdgf
     // one pdgf instance : one spark task : one spark executor
+    val waitStartTime = System.currentTimeMillis()
     var numActiveExecutors = currentActiveExecutorCount(sparkContext)
-    println(s"current executors: ${numActiveExecutors} / ${numExecutors}")
-    while (numActiveExecutors < numExecutors) {
+    while (numActiveExecutors < numExecutors && System.currentTimeMillis() - waitStartTime < 10 * 60 * 1000) {
       Thread.sleep(1000)
       numActiveExecutors = currentActiveExecutorCount(sparkContext)
-      println(s"current executors: ${numActiveExecutors} / ${numExecutors}")
+      println(s"current executors: ${numActiveExecutors} / ${numExecutors}, wait time: ${(System.currentTimeMillis() - waitStartTime) / 1000} s")
     }
 
     val numCoresPerExecutor = sparkContext.getConf.getInt("spark.executor.cores", -1)
