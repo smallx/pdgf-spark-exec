@@ -34,16 +34,15 @@ bin/spark-submit \
   --deploy-mode cluster \
   --conf 'spark.driver.memory=3g' \
   --conf 'spark.driver.memoryOverhead=1g' \
-  --conf 'spark.executor.instances=1000' \
+  --conf 'spark.executor.instances=2000' \
   --conf 'spark.executor.cores=3' \
-  --conf 'spark.executor.memory=3g' \
-  --conf 'spark.executor.memoryOverhead=1g' \
-  --conf 'spark.driver.userClassPathFirst=true' \
-  --conf 'spark.executor.userClassPathFirst=true' \
-  --conf 'spark.executor.extraJavaOptions=-Djava.awt.headless=true -Dcore-site.xml=core-site.xml -Dhdfs-site.xml= -DFileChannelProvider=pdgf.util.caching.fileWriter.HDFSChannelProvider -Ddfs.replication.override=1' \
+  --conf 'spark.task.cpus=3' \
+  --conf 'spark.executor.memory=500m' \
+  --conf 'spark.executor.memoryOverhead=1500m' \
   --jars "$PDGF_HOME/pdgf.jar,$PDGF_HOME/extlib/*.jar" \
   --archives "$PDGF_HOME/dicts.tar.gz#dicts" \
   --files "$PDGF_HOME/Constants.properties,$SPARK_HOME/conf/core-site.xml" \
+  --class de.bankmark.pdgf.SparkExec \
   pdgf-spark-exec_2.12-1.0.1.jar \
-  -ns -c -sp REFRESH_PHASE 0 -o "'hdfs://host:port/path/to/tpcxbb/benchmarks/bigbench/data/'+table.getName()+'/'" -ap 3000 -s -sf 30000
+  JAVA_BIN_PATH -Xmx1g -Djava.awt.headless=true -Dcore-site.xml=core-site.xml -Dhdfs-site.xml= -DFileChannelProvider=pdgf.util.caching.fileWriter.HDFSChannelProvider -Ddfs.replication.override=1 -cp "./*:./__spark_libs__/*" pdgf.Controller -ns -c -sp REFRESH_PHASE 0 -o "'hdfs://host:port/path/to/tpcxbb/benchmarks/bigbench/data/'+table.getName()+'/'" -ap 3000 -s -sf 30000
 ```
