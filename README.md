@@ -34,7 +34,7 @@ bin/spark-submit \
   --deploy-mode cluster \
   --conf 'spark.driver.memory=3g' \
   --conf 'spark.driver.memoryOverhead=1g' \
-  --conf 'spark.executor.instances=2000' \
+  --conf 'spark.executor.instances=1000' \
   --conf 'spark.executor.cores=3' \
   --conf 'spark.task.cpus=3' \
   --conf 'spark.executor.memory=500m' \
